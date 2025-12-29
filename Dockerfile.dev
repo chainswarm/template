@@ -1,0 +1,62 @@
+FROM python:3.13-slim
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    UV_SYSTEM_PYTHON=1
+
+# Install system dependencies and uv
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    vim \
+    nano \
+    wget \
+    build-essential \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/* \
+    && curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Add uv to PATH
+ENV PATH="/root/.cargo/bin:$PATH"
+
+# Create workspace directory
+WORKDIR /workspace
+
+# Create virtual environment with uv
+RUN uv venv /workspace/.venv
+ENV PATH="/workspace/.venv/bin:$PATH"
+
+# Copy dependency files if they exist (optional)
+# Users will create pyproject.toml from pyproject.toml.example
+COPY requirements.tx[t] pyproject.tom[l] uv.loc[k] ./
+
+# Install dependencies using uv
+# Priority: pyproject.toml > requirements.txt > minimal defaults
+RUN if [ -f pyproject.toml ]; then \
+        echo "Installing from pyproject.toml with uv" && \
+        uv pip install -e .; \
+    elif [ -f requirements.txt ]; then \
+        echo "Installing from requirements.txt with uv" && \
+        uv pip install -r requirements.txt; \
+    else \
+        echo "Installing minimal default dependencies" && \
+        uv pip install \
+            pytest \
+            pytest-cov \
+            pytest-asyncio \
+            black \
+            ruff \
+            mypy \
+            ipython \
+            python-dotenv \
+            loguru; \
+    fi
+
+# Set PYTHONPATH
+ENV PYTHONPATH=/workspace
+
+# Default command
+CMD ["/bin/bash"]

@@ -1,0 +1,50 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'development'
+    environment: 'local'
+
+# Alertmanager configuration (optional, uncomment if needed)
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets:
+#           - alertmanager:9093
+
+# Load rules once and periodically evaluate them
+# rule_files:
+#   - "rules/*.yml"
+
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Application metrics endpoints
+  # Uncomment and configure for your services
+  # - job_name: 'application'
+  #   static_configs:
+  #     - targets: ['host.docker.internal:8000']
+  #   metrics_path: '/metrics'
+
+  # Example: Multiple service instances
+  # - job_name: 'api-service'
+  #   static_configs:
+  #     - targets:
+  #       - 'api-1:8000'
+  #       - 'api-2:8000'
+  #   metrics_path: '/metrics'
+  #   relabel_configs:
+  #     - source_labels: [__address__]
+  #       target_label: instance
+
+  # Example: Dynamic service discovery with labels
+  # - job_name: 'workers'
+  #   dns_sd_configs:
+  #     - names:
+  #       - 'worker.service.consul'
+  #   relabel_configs:
+  #     - source_labels: [__meta_dns_name]
+  #       target_label: service

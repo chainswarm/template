@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: dev-container
+    volumes:
+      - .:/workspace
+      - dev_venv:/workspace/.venv
+    environment:
+      - PYTHONPATH=/workspace
+      - PYTHONUNBUFFERED=1
+      - PIP_NO_CACHE_DIR=1
+    env_file:
+      - .env
+    network_mode: host
+    stdin_open: true
+    tty: true
+    working_dir: /workspace
+
+volumes:
+  dev_venv:
+    name: dev_venv

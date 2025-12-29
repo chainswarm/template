@@ -1,0 +1,38 @@
+{
+  "recommendations": [
+    // Python
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+    "ms-python.black-formatter",
+    "ms-python.isort",
+
+    // Docker
+    "ms-azuretools.vscode-docker",
+
+    // YAML/Config
+    "redhat.vscode-yaml",
+    "dotenv.dotenv-vscode",
+
+    // Git
+    "eamodio.gitlens",
+    "mhutchie.git-graph",
+
+    // Markdown
+    "yzhang.markdown-all-in-one",
+    "davidanson.vscode-markdownlint",
+
+    // Shell scripts
+    "timonwong.shellcheck",
+    "foxundermoon.shell-format",
+
+    // Utilities
+    "editorconfig.editorconfig",
+    "gruntfuggly.todo-tree",
+    "streetsidesoftware.code-spell-checker",
+
+    // Remote development
+    "ms-vscode-remote.remote-containers",
+    "ms-vscode-remote.remote-wsl"
+  ],
+  "unwantedRecommendations": []
+}
