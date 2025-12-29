@@ -1,0 +1,102 @@
+# Active Context
+
+Track current work, recent changes, and immediate priorities.
+
+---
+
+## Current Focus
+
+**Active Project:** [Project name]
+
+**Current Phase:** [Phase name/description]
+
+**Working Mode:** [Which Flow mode is active]
+
+---
+
+## Recent Changes
+
+### YYYY-MM-DD
+
+- Change 1
+- Change 2
+- Change 3
+
+### YYYY-MM-DD
+
+- Change 1
+- Change 2
+
+---
+
+## Active Tasks
+
+### Task 1: [Name]
+
+**Status:** Not Started | In Progress | Blocked | Complete
+
+**Description:** [What needs to be done]
+
+**Context:** [Important context for this task]
+
+**Dependencies:** [What this depends on]
+
+**Next Steps:**
+1. Step 1
+2. Step 2
+
+---
+
+## Immediate Priorities
+
+1. **Priority 1:** [Description]
+   - Reason: [Why this is priority]
+   - Deadline: [If applicable]
+
+2. **Priority 2:** [Description]
+   - Reason: [Why this is priority]
+
+3. **Priority 3:** [Description]
+   - Reason: [Why this is priority]
+
+---
+
+## Decisions Pending
+
+### Decision 1: [Title]
+
+**Question:** [What needs to be decided]
+
+**Options:**
+- Option A: [Pros/Cons]
+- Option B: [Pros/Cons]
+
+**Recommendation:** [If any]
+
+**Deadline:** [When decision is needed]
+
+---
+
+## Temporary Notes
+
+[Scratch space for quick notes - clean up regularly]
+
+- Note 1
+- Note 2
+- Note 3
+
+---
+
+## Handoff Context
+
+**For next mode switch:**
+
+**Context needed:**[What the next mode needs to know]
+
+**Files to review:**
+- File 1
+- File 2
+
+**Key decisions:**
+- Decision 1
+- Decision 2

@@ -1,195 +1,628 @@
-# Template Usage Guide
+# RooFlow Template Usage Guide
 
-## Important: Example Files
+Complete guide to using the RooFlow Extended Template.
 
-This template includes **example files** that won't interfere with template syncing:
+---
 
--  **`pyproject.toml.example`** - Example Python project configuration
-- **`libs-example/`** - Example core library modules
+## Table of Contents
 
-### Why Example Files?
+1. [Installation](#installation)
+2. [First-Time Setup](#first-time-setup)
+3. [Memory Bank](#memory-bank)
+4. [Flow Modes](#flow-modes)
+5. [Infrastructure](#infrastructure)
+6. [Development Workflow](#development-workflow)
+7. [Best Practices](#best-practices)
 
-Since this template repository is updated regularly and projects created from it will sync changes, we cannot include actual project files. Instead, we provide examples that you copy and customize.
+---
 
-##  Getting Started
+## Installation
 
-### 1. Create Project Configuration
+### Run the Installer
 
-**Option A: Using pyproject.toml (recommended)**
 ```bash
-# Copy example and customize
+bash install_rooflow_conport.sh
+```
+
+The installer will:
+1. Clone RooFlow repository
+2. Copy Flow mode configurations
+3. Install generation scripts
+4. **Initialize Memory Bank** from templates
+5. Offer to create `pyproject.toml`
+6. Optionally start infrastructure
+
+### Post-Installation
+
+If you skipped any of the optional steps:
+
+**Create pyproject.toml:**
+```bash
 cp pyproject.toml.example pyproject.toml
-
-# Edit pyproject.toml
-# - Update project name
-# - Add your dependencies
-# - Customize settings
+# Edit: Update project name, dependencies
 ```
 
-**Option B: Using requirements.txt**
+**Initialize Memory Bank:**
 ```bash
-# Create requirements.txt
-cat > requirements.txt <<EOF
-loguru>=0.7.0
-python-dotenv>=1.0.0
-# Add your dependencies here
-EOF
+cp -r memory-bank-template memory-bank
+cd memory-bank
+for f in *.template; do mv "$f" "${f%.template}"; done
 ```
 
-### 2. Copy Core Libraries (Optional)
-
-If you want to use the example libraries:
-
+**Start infrastructure:**
 ```bash
-# Copy entire libs-example to libs/
-cp -r libs-example libs
-
-# Or copy individual modules
-cp -r libs-example/observability libs/
-cp -r libs-example/db libs/
-```
-
-Then install their dependencies:
-```bash
-# For observability
-uv add loguru prometheus-client
-
-# For database
-uv add clickhouse-driver  # Or your database driver
-```
-
-### 3. Create Your Project Structure
-
-```bash
-# Create your source directory
-mkdir -p src/your_project
-
-# Or organize however you prefer
-mkdir -p packages/
-mkdir -p scripts/
+bash scripts/dev/start-infra.sh
 ```
 
 ---
 
-## Working with the Development Container
+## First-Time Setup
 
-### Build Container (First Time)
+### 1. Configure Environment
 
 ```bash
-docker compose -f docker-compose.dev.yml build
+# Copy environment example
+cp .env.example .env
+
+# Edit with your values
+nano .env
 ```
 
-### Run Scripts
+**Key variables:**
+- `POSTGRES_*` - PostgreSQL credentials
+- `CLICKHOUSE_*` - ClickHouse settings
+- `LOG_LEVEL` - Logging verbosity
 
-```bash
-# Interactive shell
-docker compose -f docker-compose.dev.yml run --rm dev bash
+### 2. Customize Memory Bank
 
-# Run a Python script
-docker compose -f docker-compose.dev.yml run --rm dev python src/your_script.py
+Edit [`memory-bank/systemPatterns.md`](./memory-bank/systemPatterns.md):
+
+```markdown
+# System Patterns
+
+## Development Principles
+[Add your team's coding standards...]
+
+## Infrastructure Patterns
+[Document your specific infrastructure...]
 ```
 
-### Install Packages Freely
-
-Agents and developers can install packages as needed:
+### 3. Install Dependencies
 
 ```bash
-# Inside container
-uv pip install requests pandas numpy
+# Install base and dev dependencies
+uv pip install -e ".[dev]"
 
-# Add as permanent dependency
-uv add requests pandas
+# Add project-specific packages
+uv add requests httpx  # Example
+```
+
+### 4. Verify Setup
+
+```bash
+# Check infrastructure
+cd infrastructure && docker compose ps
+
+# Run tests
+docker compose run --rm dev pytest
+
+# Check Python environment
+docker compose run --rm dev python --version
 ```
 
 ---
 
-## Template Sync
+## Memory Bank
 
-When the template is updated, you can sync changes:
+The Memory Bank is RooFlow's central knowledge management system.
 
-```bash
-# Add template as remote (one time)
-git remote add template https://github.com/your-org/template
+### Structure
 
-# Fetch template updates
-git fetch template main
+**systemPatterns.md** - Reusable patterns
+- Code patterns
+- Testing approach
+- Error handling
+- Bug pattern catalog
 
-# Merge template changes
-git merge template/main --allow-unrelated-histories
+**decisionLog.md** - Architecture decisions
+- ADRs (Architecture Decision Records)
+- Technology choices
+- Design trade-offs
 
-# Resolve conflicts if any
-# ... edit conflicting files ...
-git add .
-git commit
+**productContext.md** - Product knowledge
+- Business rules
+- Domain terminology
+- User workflows
+
+**progress.md** - Project tracking
+- Milestones
+- Current work
+- Blockers
+
+**activeContext.md** - Current state
+- Active tasks
+- Recent changes
+- Handoff context
+
+### When to Update
+
+**After making decisions:**
+```markdown
+# In decisionLog.md
+# ADR-003: Choose FastAPI for REST API
+
+**Status:** Accepted
+**Date:** 2025-12-30
+
+## Decision
+Use FastAPI for REST API implementation
+
+## Rationale
+- Async support
+- Automatic OpenAPI docs
+- Type safety with Pydantic
 ```
 
-**Safe to sync** because:
-- `pyproject.toml` is in `.gitignore` (you use `pyproject.toml`, template has `pyproject.toml.example`)
-- `libs/` is in `.gitignore` (you use `libs/`, template has `libs-example/`)
-- Infrastructure and docs can be safely updated
+**After discovering patterns:**
+```markdown
+# In systemPatterns.md
+## Database Patterns
+
+### Connection Pooling
+
+```python
+from libs.db.base import get_session
+
+with get_session() as session:
+    result = session.execute(query)
+```
+```
+
+**After fixing bugs:**
+```markdown
+# In systemPatterns.md
+## Bug Patterns
+
+### Empty String Validation
+
+**Problem:** `if value:` treats empty string as falsy
+
+**Solution:**
+```python
+if value is not None and value != "":
+    process(value)
+```
+
+**When discovered:** 2025-12-30
+**Test:** test_empty_string_validation()
+```
 
 ---
 
-##  Example Workflows
+## Flow Modes
 
-### New Python Project
+### Architect Mode
 
-```bash
-# 1. Copy pyproject.toml
-cp pyproject.toml.example pyproject.toml
-# Edit and set name = "my-project"
+**Use for:**
+- System design
+- Technology evaluation
+- Creating ADRs
+- Planning refactorings
 
-# 2. Create source structure
-mkdir -p src/my_project
-touch src/my_project/__init__.py
+**Outputs:**
+- Design documents
+- Architecture diagrams (mermaid)
+- ADRs in decisionLog.md
+- Patterns in systemPatterns.md
 
-# 3. Build dev container
-docker compose -f docker-compose.dev.yml build
-
-# 4. Start developing
-docker compose -f docker-compose.dev.yml run --rm dev bash
+**Example:**
+```
+"Switch to Architect mode. Design a caching layer for the API."
 ```
 
-### Using Example Libraries
+### Code Mode
 
-```bash
-# 1. Copy libraries you need
-cp -r libs-example/observability libs/
+**Use for:**
+- Feature implementation
+- Writing tests
+- Refactoring
+- Code reviews
 
-# 2. Install dependencies
-uv add loguru prometheus-client
+**Follows:**
+- systemPatterns.md conventions
+- TDD for critical logic
+- Type hints required
+- Structured logging
 
-# 3. Use in your code
-# src/my_project/main.py
-from libs.observability import setup_logger
-setup_logger("my-app")
+**Example:**
+```
+"Switch to Code mode. Implement the user authentication service per the design in decisionLog.md ADR-005."
+```
+
+### Debug Mode
+
+**Use for:**
+- Bug investigation
+- Performance issues
+- Test-driven debugging
+- Pattern documentation
+
+**Process:**
+1. Write failing test
+2. Investigate with observability
+3. Fix code
+4. Verify test passes
+5. Document bug pattern
+
+**Example:**
+```
+"Switch to Debug mode. Investigate why transfers table query is slow."
+```
+
+### Ask Mode
+
+**Use for:**
+- Querying Memory Bank
+- Understanding code
+- Getting recommendations
+- Learning patterns
+
+**Always:**
+- Checks Memory Bank first
+- References systemPatterns.md
+- Provides code examples
+- Suggests appropriate mode for actions
+
+**Example:**
+```
+"Switch to Ask mode. How should I handle database connections in this project?"
+```
+
+### Orchestrator Mode
+
+**Use for:**
+- Multi-phase projects
+- Cross-mode coordination
+- Complex refactorings
+- Long-running features
+
+**Maintains:**
+- progress.md tracking
+- activeContext.md handoffs
+- Consistent decisions across phases
+
+**Example:**
+```
+"Switch to Orchestrator mode. Coordinate the migration from PostgreSQL to ClickHouse."
 ```
 
 ---
 
-## File Organization
+## Infrastructure
 
+### Services
+
+**Core services** ([`infrastructure/docker-compose.yml`](./infrastructure/docker-compose.yml)):
+- PostgreSQL (transactional data)
+- Redis (caching)
+- ClickHouse (analytics)
+
+**Observability stack** ([`infrastructure/observability/`](./infrastructure/observability/)):
+- Prometheus (metrics)
+- Grafana (dashboards)
+- Loki (log aggregation)
+- Promtail (log shipper)
+
+### Start/Stop
+
+```bash
+# Start all
+bash scripts/dev/start-infra.sh
+
+# Start specific service
+cd infrastructure
+docker compose up -d postgres redis
+
+# Check status
+docker compose ps
+
+# View logs
+docker compose logs -f postgres
+
+# Stop all
+bash scripts/dev/stop-infra.sh
 ```
-your-project/           # Created from template
-├── pyproject.toml     # Created from pyproject.toml.example (gitignored)
-├── src/               # Your code (gitignored by default)
-│   └── your_project/
-├── libs/              # Copied from libs-example (git ignored by default)
-│   ├── observability/
-│   └── db/
-├── scripts/           # Your scripts
-├── infrastructure/    # From template (safe to sync)
-├── roocode/          # From template (safe to sync)
-└── docs/             # From template (safe to sync)
+
+### Access Services
+
+**Grafana:**
+- URL: `http://localhost:3001`
+- Login: admin / admin
+
+**Prometheus:**
+- URL: `http://localhost:9090`
+
+**Databases:**
+- PostgreSQL: `localhost:5432`
+- Redis: `localhost:6379`
+- ClickHouse: `localhost:9000` (native)
+
+### Using Observability
+
+**Structured logging:**
+```python
+from libs.observability.logging import get_logger
+
+logger = get_logger(__name__)
+
+logger.info(
+    "Processing started",
+    item_id=item.id,
+    user_id=user.id,
+    action="process"
+)
+```
+
+**Metrics:**
+```python
+from libs.observability.metrics import record_metric
+
+record_metric(
+    "items_processed",
+    1,
+    labels={"status": "success", "type": "payment"}
+)
+```
+
+**Timing decorator:**
+```python
+from libs.observability.decorators import with_timing
+
+@with_timing("process_payment")
+def process_payment(payment_id: str):
+    # ... processing
+    pass
 ```
 
 ---
 
-## Questions?
+## Development Workflow
 
-See the full documentation:
-- [`README.md`](README.md) - Main project README
-- [`roocode/automode.md`](roocode/automode.md) - Execution patterns
-- [`infrastructure/README.md`](infrastructure/README.md) - Infrastructure setup
-- [`libs-example/README.md`](libs-example/README.md) - Library usage
+### Daily Workflow
 
+1. **Check activeContext.md** - See what's in progress
+2. **Choose appropriate mode** - Architect, Code, Debug, etc.
+3. **Work on task** - Follow mode-specific patterns
+4. **Update Memory Bank** - Document decisions/patterns
+5. **Update progress.md** - Track completion
+
+### Adding Features
+
+1. **Architect mode** - Design the feature
+   - Create ADR in decisionLog.md
+   - Design data models
+   - Plan integration
+
+2. **Code mode** - Implement
+   - Follow systemPatterns.md
+   - Write tests (TDD for critical logic)
+   - Use libs/ patterns
+
+3. **Debug mode** - Test and refine
+   - Integration testing
+   - Performance verification
+   - Bug pattern documentation
+
+4. **Update Memory Bank**
+   - New patterns → systemPatterns.md
+   - Decisions → decisionLog.md
+   - Progress → progress.md
+
+### Fixing Bugs
+
+1. **Debug mode** - TDD approach
+   ```python
+   # Write failing test FIRST
+   def test_bug_empty_string_validation():
+       """Reproduce bug: empty strings pass validation"""
+       with pytest.raises(ValidationError):
+           validate_input("")  # Should fail but doesn't
+   ```
+
+2. **Run test** - Confirm it fails
+
+3. **Fix code** - Implement fix
+
+4. **Run test** - Confirm it passes
+
+5. **Document pattern** in systemPatterns.md:
+   ```markdown
+   ## Bug Patterns
+   
+   ### Empty String Validation
+   **Problem:** ...
+   **Solution:** ...
+   **Test:** test_bug_empty_string_validation()
+   ```
+
+6. **Commit test + fix together**
+
+### Package Management
+
+**Installing packages:**
+```bash
+# Quick install for experimentation
+uv pip install pandas
+
+# Production dependency
+uv add pandas
+
+# Development dependency
+uv add --dev pytest-mock
+
+# Update all
+uv pip install -e ".[dev]"
+```
+
+**Agents can:**
+- ✅ Install packages freely
+- ✅ Test immediately
+- ✅ Add to pyproject.toml with `uv add`
+- ✅ Commit with code changes
+
+**Agents should NOT:**
+- ❌ Ask permission for standard packages
+- ❌ Leave dependencies undocumented
+- ❌ Use pip instead of uv
+
+---
+
+## Best Practices
+
+### Code Quality
+
+**Always:**
+- ✓ Use type hints
+- ✓ Validate inputs
+- ✓ Structured logging
+- ✓ Fail-fast errors
+- ✓ Follow systemPatterns.md
+
+**Never:**
+- ❌ Emoticons in logs
+- ❌ Silent exception catching
+- ❌ Magic numbers/strings
+- ❌ Default values for invalid inputs
+
+### Testing
+
+**Write tests for:**
+- Bug fixes (TDD - test first!)
+- Critical business logic
+- External integrations
+- Complex algorithms
+
+**Skip tests for:**
+- Simple CRUD
+- One-time scripts
+- Prototypes
+
+### Git
+
+**Check last 3 commits before changes:**
+```bash
+git log -3 --oneline --stat
+```
+
+**Commit messages:**
+```
+Type: Short description
+
+Longer explanation:
+- Why this change
+- What problem it solves
+
+Refs: #123
+```
+
+**Types:** Feature, Fix, Refactor, Docs, Test, Chore
+
+### Memory Bank Maintenance
+
+**Keep current:**
+- Update systemPatterns.md when establishing patterns
+- Create ADRs for significant decisions
+- Track progress regularly
+- Clean up activeContext.md
+
+**Cross-reference:**
+- Link related sections
+- Reference from mode rules
+- Keep DRY (Don't Repeat Yourself)
+
+---
+
+## Troubleshooting
+
+### Infrastructure Won't Start
+
+```bash
+# Check Docker
+docker --version
+docker compose --version
+
+# View errors
+cd infrastructure
+docker compose up  # Without -d to see output
+
+# Check ports
+netstat -an | grep 5432  # PostgreSQL
+netstat -an | grep 6379  # Redis
+```
+
+### Container Issues
+
+```bash
+# Rebuild dev container
+docker compose -f docker-compose.dev.yml build dev
+
+# Reset infrastructure
+bash scripts/dev/stop-infra.sh
+docker compose down -v  # Removes volumes!
+bash scripts/dev/start-infra.sh
+```
+
+### Package Installation Fails
+
+```bash
+# Update uv
+pip install --upgrade uv
+
+# Clear cache
+rm -rf .venv
+uv venv
+uv pip install -e ".[dev]"
+```
+
+### Memory Bank Not Working
+
+```bash
+# Verify structure
+ls -la memory-bank/
+# Should see: systemPatterns.md, decisionLog.md, etc.
+
+# Re-initialize if needed
+rm -rf memory-bank
+cp -r memory-bank-template memory-bank
+cd memory-bank && for f in *.template; do mv "$f" "${f%.template}"; done
+```
+
+---
+
+## Next Steps
+
+1. ✅ Run installer
+2. ✅ Configure environment (.env)
+3. ✅ Customize Memory Bank
+4. ✅ Install dependencies
+5. ✅ Start infrastructure
+6. 🚀 Start building!
+
+**Helpful commands:**
+```bash
+# Quick reference
+docker compose run --rm dev pytest          # Run tests
+docker compose run --rm dev python script.py  # Run script
+bash scripts/dev/start-infra.sh              # Start infra
+git log -3 --oneline                         # Recent commits
+```
+
+**Documentation:**
+- [README.md](./README.md) - Overview
+- [memory-bank/README.md](./memory-bank-template/README.md) - Memory Bank guide
+- [infrastructure/README.md](./infrastructure/README.md) - Infrastructure details
+- [libs/README.md](./libs/README.md) - Library documentation
+
+---
+
+Happy coding with RooFlow! 🚀

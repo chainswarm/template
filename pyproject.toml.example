@@ -1,26 +1,49 @@
 [project]
 name = "your-project-name"
 version = "0.1.0"
-description = "AI-assisted project built with roocode template"
-authors = []
-requires-python = ">=3.13"
+description = "Your project description"
+authors = [
+    {name = "Your Name", email = "your.email@example.com"}
+]
 readme = "README.md"
-license = {text = "MIT"}
-
+requires-python = ">=3.13"
 dependencies = [
-    "loguru>=0.7.0",
-    "python-dotenv>=1.0.0",
+    # Core dependencies
+    "loguru>=0.7.0",          # Structured logging
+    "python-dotenv>=1.0.0",   # Environment variables
+    "pyd antic>=2.0.0",         # Data validation
+    "pydantic-settings>=2.0.0", # Settings management
+    
+    # Add your project dependencies here
 ]
 
 [project.optional-dependencies]
 dev = [
+    # Testing
     "pytest>=8.0.0",
-    "pytest-cov>=6.0.0",
-    "pytest-asyncio>=0.24.0",
-    "black>=24.0.0",
-    "ruff>=0.8.0",
-    "mypy>=1.13.0",
-    "ipython>=8.30.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.12.0",
+    
+    # Code quality
+    "ruff>=0.1.15",           # Linter and formatter
+    "mypy>=1.8.0",            # Type checking
+    
+    # Development tools
+    "ipython>=8.20.0",        # Enhanced Python shell
+    "ipdb>=0.13.13",          # Debugger
+]
+
+db = [
+    # Uncomment and add database drivers as needed
+    # "psycopg2-binary>=2.9.9",     # PostgreSQL
+    # "clickhouse-driver>=0.2.7",   # ClickHouse
+    # "redis>=5.0.1",               # Redis
+]
+
+observability = [
+    # Observability libraries (if using custom metrics)
+    # "prometheus-client>=0.19.0",
 ]
 
 [build-system]
@@ -29,24 +52,60 @@ build-backend = "hatchling.build"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-python_files = "test_*.py"
-python_functions = "test_*"
-addopts = "-ra -q --tb=short"
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--tb=short",
+    "--cov=src",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+]
 
-[tool.black]
-line-length = 120
-target-version = ["py313"]
-include = '\.pyi?$'
+[tool.mypy]
+python_version = "3.13"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_any_unimported = false
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+check_untyped_defs = true
 
 [tool.ruff]
-line-length = 120
 target-version = "py313"
+line-length = 100
 
 [tool.ruff.lint]
 select = [
-    "E",   # pycodestyle errors
-    "W",   # pycodestyle warnings
-    "F",   # pyflakes
-    "I",   # isort
-    "UP",  # pyupgrade
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes
+    "I",      # isort
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "UP",     # pyupgrade
 ]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "B008",   # do not perform function calls in argument defaults
+    "C901",   # too complex
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+
+[tool.uv]
+dev-dependencies = [
+    # UV-specific development dependencies
+]
+
+# UV settings
+[tool.uv.sources]
+# Add custom package sources here if needed

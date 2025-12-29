@@ -1,0 +1,49 @@
+# Decision Log
+
+Track architecture decisions, technology choices, and significant technical decisions here.
+
+---
+
+## Template: Architecture Decision Record (ADR)
+
+Use this format for documented decisions:
+
+```markdown
+# ADR-NNN: [Decision Title]
+
+**Status:** Proposed | Accepted | Deprecated | Superseded
+**Date:** YYYY-MM-DD
+**Context:** [What is the issue we're trying to solve?]
+
+## Decision
+[What we decided to do]
+
+## Rationale
+[Why this approach over alternatives]
+
+## Consequences
+**Positive:**
+- Benefit 1
+- Benefit 2
+
+**Negative:**
+- Trade-off 1
+- Trade-off 2
+
+**Neutral:**
+- Consideration 1
+
+## Alternatives Considered
+1. **Alternative 1**: [Why rejected]
+2. **Alternative 2**: [Why rejected]
+
+## References
+- Related systemPatterns sections
+- External resources
+```
+
+---
+
+## Decisions
+
+Add your ADRs below...

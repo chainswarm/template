@@ -1,0 +1,662 @@
+# System Patterns
+
+This document contains reusable patterns, conventions, and best practices for the project.
+
+---
+
+## Development Principles
+
+### Core Principles
+
+**NEVER:**
+- ❌ Use emoticons in logs (🚀, ✅, ❌, etc.)
+- ❌ Silently catch exceptions without logging or re-raising
+- ❌ Return `None` without explicit documentation
+- ❌ Use magic numbers or strings without constants
+- ❌ Write clever code that requires comments to understand
+- ❌ Mix business logic with infrastructure concerns
+- ❌ Skip input validation
+- ❌ Assume external data is valid
+
+**ALWAYS:**
+- ✓ Validate inputs at boundaries
+- ✓ Log structured data (use key-value pairs)
+- ✓ Use type hints
+- ✓ Raise specific exceptions
+- ✓ Write self-descriptive code
+- ✓ Separate concerns (business logic, data access, presentation)
+- ✓ Make failures explicit and debuggable
+- ✓ Document why, not what
+
+---
+
+## Error Handling
+
+### Fail-Fast Philosophy
+
+Validate early, fail explicitly:
+
+```python
+def process_transfer(transfer_id: str, amount: float) -> Transfer:
+    # Validate inputs immediately
+    if not transfer_id:
+        raise ValueError("transfer_id cannot be empty")
+    
+    if amount <= 0:
+        raise ValueError(f"Invalid amount: {amount}. Must be positive")
+    
+    # Proceed with confidence
+    transfer = fetch_transfer(transfer_id)
+    
+    if not transfer:
+        raise TransferNotFoundError(f"Transfer {transfer_id} not found")
+    
+    return process(transfer, amount)
+```
+
+### Exception Hierarchy
+
+Create specific exception types:
+
+```python
+class ProjectError(Exception):
+    """Base exception for all project errors"""
+    pass
+
+
+class ValidationError(ProjectError):
+    """Raised when input validation fails"""
+    pass
+
+
+class NotFoundError(ProjectError):
+    """Raised when resource is not found"""
+    pass
+
+
+class InsufficientDataError(ProjectError):
+    """Raised when not enough data for operation"""
+    pass
+```
+
+### Error Context
+
+Always provide actionable context:
+
+```python
+# ❌ Bad
+raise Exception("Failed")
+
+# ❌ Still bad
+raise ValueError("Invalid input")
+
+# ✓ Good
+raise ValidationError(
+    f"Invalid block range for network '{network}': "
+    f"start={start_block}, end={end_block}. "
+    f"Expected: start < end <= {max_block}"
+)
+```
+
+### Try-Catch Guidelines
+
+Only catch exceptions you can handle:
+
+```python
+# ❌ Bad - swallowing errors
+try:
+    result = process_data()
+except Exception:
+    return None
+
+# ✓ Good - catch specific, handle properly
+try:
+    result = fetch_from_api()
+except APIConnectionError as e:
+    logger.error(
+        "API connection failed",
+        error=str(e),
+        endpoint=e.endpoint,
+        retry_count=e.retry_count
+    )
+    raise
+
+# ✓ Good - transform exceptions
+try:
+    data = external_api.fetch()
+except ExternalAPIError as e:
+    raise DataFetchError(
+        f"Failed to fetch data from {external_api.name}: {str(e)}"
+    ) from e
+```
+
+---
+
+## Logging Standards
+
+### Structured Logging
+
+Use loguru with structured fields:
+
+```python
+from loguru import logger
+
+# ❌ Bad - unstructured
+logger.info(f"Processing block {block_number} for {network}")
+
+# ❌ Bad - emoticons
+logger.info(f"✅ Successfully processed block {block_number}")
+
+# ✓ Good - structured
+logger.info(
+    "Processing block",
+    block_number=block_number,
+    network=network
+)
+
+# ✓ Good - with context
+logger.info(
+    "Block processing complete",
+    block_number=block_number,
+    network=network,
+    transactions_count=len(transactions),
+    duration_ms=duration,
+    status="success"
+)
+```
+
+### Log Levels
+
+```python
+# DEBUG - detailed diagnostic info
+logger.debug(
+    "Cache lookup",
+    key=cache_key,
+    hit=cache_hit,
+    ttl_remaining=ttl
+)
+
+# INFO - normal operations
+logger.info(
+    "Transfer indexed",
+    transfer_id=transfer_id,
+    from_address=from_addr,
+    to_address=to_addr,
+    amount=amount
+)
+
+# WARNING - unexpected but handled
+logger.warning(
+    "Retry attempt",
+    attempt=retry_count,
+    max_attempts=max_retries,
+    error=str(last_error)
+)
+
+# ERROR - errors that need attention
+logger.error(
+    "Failed to process block",
+    block_number=block_number,
+    error=str(e),
+    traceback=traceback.format_exc()
+)
+```
+
+### No Emoticons in Logs
+
+Logs are for machines and humans debugging production issues:
+
+```python
+# ❌ NEVER
+logger.info("🚀 Starting indexer")
+logger.info("✅ Success")
+logger.error("❌ Failed")
+
+# ✓ ALWAYS
+logger.info("Indexer starting", service="block-indexer", version="1.0.0")
+logger.info("Operation completed", operation="index_block", status="success")
+logger.error("Operation failed", operation="index_block", status="error")
+```
+
+---
+
+## Code Organization
+
+### Function Design
+
+Keep functions focused and testable:
+
+```python
+# ❌ Bad - doing too much
+def process_everything(data):
+    validated = validate(data)
+    transformed = transform(validated)
+    enriched = enrich(transformed)
+    stored = store(enriched)
+    return stored
+
+# ✓ Good - single responsibility
+def validate_transfer_data(data: dict) -> TransferData:
+    """Validate and parse raw transfer data."""
+    if not data.get("id"):
+        raise ValidationError("Transfer ID required")
+    
+    return TransferData(**data)
+
+
+def enrich_transfer(transfer: TransferData) -> EnrichedTransfer:
+    """Add labels and metadata to transfer."""
+    labels = fetch_labels(transfer.from_address, transfer.to_address)
+    return EnrichedTransfer(transfer, labels)
+```
+
+### Type Hints
+
+Always use type hints:
+
+```python
+from typing import Optional, List, Dict, Any
+
+# ❌ Bad
+def fetch_transfers(network, start_block, end_block):
+    pass
+
+# ✓ Good
+def fetch_transfers(
+    network: str,
+    start_block: int,
+    end_block: int
+) -> List[Transfer]:
+    pass
+```
+
+### Constants
+
+Use constants for magic values:
+
+```python
+# ❌ Bad
+if status == 1:
+    process()
+
+# ✓ Good
+STATUS_ACTIVE = 1
+STATUS_INACTIVE = 0
+
+if status == STATUS_ACTIVE:
+    process()
+
+# ✓ Better - use enums
+from enum import Enum
+
+class TransferStatus(Enum):
+    PENDING = "pending"
+    CONFIRMED = "confirmed"
+    FAILED = "failed"
+
+if status == TransferStatus.CONFIRMED:
+    process()
+```
+
+---
+
+## Testing Philosophy
+
+### Tests as Executable Documentation
+
+Tests should tell the story of what your code does:
+
+```python
+def test_layering_pattern_detection_identifies_three_hop_chain():
+    """
+    Given: A sequence of transfers A -> B -> C -> D within 1 hour
+    When: Analyzing for layering patterns with min_layers=3
+    Then: Should detect one layering pattern with path A -> B -> C -> D
+    """
+    transfers = create_transfer_chain(
+        addresses=["A", "B", "C", "D"],
+        time_spacing_minutes=10,
+        amount=1000
+    )
+    
+    patterns = detect_layering_pattern(transfers, min_layers=3)
+    
+    assert len(patterns) == 1
+    assert patterns[0].path == ["A", "B", "C", "D"]
+    assert patterns[0].confidence > 0.8
+```
+
+### When to Write Tests
+
+**ALWAYS Test:**
+- Bug fixes (regression tests - write test FIRST)
+- Integration points (APIs, databases)
+- Critical business logic
+- Complex algorithms
+
+**SKIP Tests:**
+- Simple CRUD operations
+- One-time migration scripts
+- Prototype/exploratory code
+
+### Test-Driven Debugging
+
+**For bug fixes:**
+1. Write failing test that reproduces the bug
+2. Verify test fails
+3. Fix the code
+4. Verify test passes
+5. **Commit test + fix together**
+
+```python
+def test_bug_transfer_empty_string_not_validated():
+    """
+    Bug: Empty string transfer_id passes validation.
+    
+    Steps to reproduce:
+    1. Create transfer with empty string ID
+    2. Process transfer
+    
+    Expected: ValidationError raised
+    Actual: Transfer processes successfully (BUG)
+    """
+    with pytest.raises(ValidationError, match="transfer_id cannot be empty"):
+        process_transfer(transfer_id="", amount=100)
+```
+
+---
+
+## Package Management
+
+### Use uv for All Python Packages
+
+**Never use pip directly. Always use uv.**
+
+```bash
+# Add dependency
+uv pip install package-name
+
+# Add dev dependency
+uv pip install --dev package-name
+
+# Add to project
+uv add package-name
+
+# Update pyproject.toml
+# Add to dependencies or optional-dependencies
+```
+
+### Agent Guidelines for Packages
+
+**Agents SHOULD:**
+- Install packages freely as needed for tasks
+- Test that code works after adding packages.
+- Document new permanent dependencies in `pyproject.toml`
+- Use `uv pip install` for quick/temporary needs
+- Use `uv add` for permanent dependencies
+- Commit dependency changes with code changes
+
+**Agents should NOT:**
+- Ask permission to install standard packages
+- Skip testing after adding packages
+- Leave dependencies undocumented
+
+---
+
+## Git Workflows
+
+### Rule: Check Last 3 Commits
+
+**ALWAYS check the last 3 commits before making changes.**
+
+```bash
+# Quick overview
+git log -3 --oneline --stat
+
+# With full diff
+git log -3 -p
+
+# Changes to specific file
+git log -3 --oneline -- path/to/file.py
+```
+
+**Why this matters:**
+- Avoid reverting recent bug fixes
+- Understand code evolution
+- Learn from past decisions
+- Maintain consistency
+
+### Commit Message Format
+
+```
+Type: Short description (50 chars max)
+
+Longer explanation if needed (72 chars per line max):
+- Why this change was made
+- What problem it solves
+- Any important context
+
+Refs: #issue-number (if applicable)
+```
+
+**Types:**
+- `Feature:` New functionality
+- `Fix:` Bug fix
+- `Refactor:` Code restructuring without behavior change
+- `Docs:` Documentation changes
+- `Test:` Test additions or modifications
+- `Chore:` Maintenance tasks
+
+**Examples:**
+
+```
+Fix: Prevent decimal precision loss in transfer amounts
+
+ClickHouse was truncating decimal values to 2 places.
+Changed column type from Decimal(18,2) to Decimal(38,18)
+to preserve full precision.
+
+Refs: #123
+```
+
+---
+
+## Infrastructure Patterns
+
+### Docker for All Services
+
+Run all code in development container:
+
+```bash
+# Start infrastructure
+bash scripts/dev/start-infra.sh
+
+# Run Python scripts
+docker compose run --rm dev python scripts/my_script.py
+
+# Run tests
+docker compose run --rm dev pytest
+
+# Stop infrastructure
+bash scripts/dev/stop-infra.sh
+```
+
+### Observability Stack
+
+Use Prometheus/Loki/Grafana for all observability:
+
+**Metrics (Prometheus):**
+- Use counters for events (requests, errors)
+- Use gauges for current values (queue size, active connections)
+- Use histograms for durations (request latency, processing time)
+- Add meaningful labels (status, method, endpoint)
+
+**Logs (Loki):**
+- Structured logging with loguru
+- No emoticons
+- Include context fields
+
+**Dashboards (Grafana):**
+- Create dashboards for key metrics
+- Set up alerts for errors
+- Track system health
+
+See [`infrastructure/observability/`](../infrastructure/observability/) for configuration.
+
+---
+
+## Code Patterns
+
+### Database Access
+
+Use patterns from [`libs/db/`](../libs/db/):
+
+```python
+from libs.db.base import get_session
+from libs.db.utils import execute_with_retry
+
+def fetch_transfers(network: str) -> List[Transfer]:
+    with get_session() as session:
+        result = session.execute(
+            select(Transfer).where(Transfer.network == network)
+        )
+        return result.scalars().all()
+```
+
+### Observability Integration
+
+Use patterns from [`libs/observability/`](../libs/observability/):
+
+```python
+from libs.observability.logging import get_logger
+from libs.observability.metrics import record_metric
+from libs.observability.decorators import with_timing
+
+logger = get_logger(__name__)
+
+@with_timing("process_transfer")
+def process_transfer(transfer: Transfer) -> Result:
+    logger.info(
+        "Processing transfer",
+        transfer_id=transfer.id,
+        amount=transfer.amount
+    )
+    
+    result = do_processing(transfer)
+    
+    record_metric(
+        "transfers_processed",
+        1,
+        labels={"status": result.status, "network": transfer.network}
+    )
+    
+    return result
+```
+
+### Configuration Management
+
+Follow patterns from [`.env.example`](../.env.example):
+
+```python
+from pydantic_settings import BaseSettings
+
+class Settings(BaseSettings):
+    database_url: str
+    redis_url: str
+    log_level: str = "INFO"
+    
+    class Config:
+        env_file = ".env"
+
+# Usage
+settings = Settings()
+```
+
+**Never hardcode secrets or configuration.**
+
+---
+
+## Bug Patterns
+
+Document discovered bug patterns here as you encounter them.
+
+### Pattern: Empty String Validation
+
+**Problem:** Empty strings pass validation because `if value:` check treats empty string as falsy.
+
+**Solution:**
+```python
+# ❌ Bad - fails for empty string
+if value:
+    process(value)
+
+# ✓ Good - explicit check
+if value is not None and value != "":
+    process(value)
+```
+
+**When discovered:** [Add date when you discover similar bugs]
+**Related test:** [Add test reference]
+
+---
+
+## Documentation
+
+### Docstrings
+
+Write docstrings for public APIs:
+
+```python
+def detect_pattern(
+    transfers: List[Transfer],
+    min_layers: int = 3,
+    time_window_hours: int = 24
+) -> List[Pattern]:
+    """
+    Detect patterns in transfer sequences.
+    
+    Args:
+        transfers: List of transfers to analyze
+        min_layers: Minimum number of hops to constitute pattern
+        time_window_hours: Maximum time between hops
+    
+    Returns:
+        List of detected patterns with confidence scores
+    
+    Raises:
+        ValidationError: If transfers list is empty
+        InsufficientDataError: If fewer than min_layers transfers
+    """
+    if not transfers:
+        raise ValidationError("Transfers list cannot be empty")
+    
+    # Implementation
+    pass
+```
+
+### Comments
+
+Comments explain WHY, not WHAT:
+
+```python
+# ❌ Bad - explaining what code does
+# Loop through transfers
+for transfer in transfers:
+    # Calculate amount
+    amount = transfer.amount * transfer.price
+
+# ✓ Good - explaining why
+# We multiply by price here rather than in the repository layer
+# because prices can change, and we want the exact price at query time
+for transfer in transfers:
+    amount = transfer.amount * transfer.price
+```
+
+---
+
+## Related Files
+
+- [`libs/`](../libs/) - Reusable library code
+- [`infrastructure/`](../infrastructure/) - Infrastructure configuration
+- [`scripts/`](../scripts/) - Utility scripts
+- [`.roo/rules-flow-*/`](../.roo/) - Mode-specific rules

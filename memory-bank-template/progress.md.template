@@ -1,0 +1,74 @@
+# Progress
+
+Track project milestones, completed work, and blockers here.
+
+---
+
+## Overall Status
+
+[Current status - e.g., "30% complete - Design phase"]
+
+---
+
+## Milestones
+
+- [ ] Milestone 1 - [Description] (Target: YYYY-MM-DD)
+- [ ] Milestone 2 - [Description] (Target: YYYY-MM-DD)
+- [ ] Milestone 3 - [Description] (Target: YYYY-MM-DD)
+
+---
+
+## Completed Work
+
+### Week of YYYY-MM-DD
+
+- [x] Task 1 completed
+- [x] Task 2 completed
+
+### Week of YYYY-MM-DD
+
+- [x] Task 3 completed
+
+---
+
+## Current Work
+
+**Active Tasks:**
+- [ ] Task in progress 1
+- [ ] Task in progress 2
+
+**Assigned To:** [Mode/Person]
+
+---
+
+## Blockers
+
+### Blocker 1: [Title]
+
+**Description:** [What's blocked and why]
+
+**Impact:** [How this affects progress]
+
+**Resolution Plan:** [How to unblock]
+
+**Status:** Blocked | In Progress | Resolved
+
+---
+
+## Risks
+
+### Risk 1: [Title]
+
+**Probability:** Low | Medium | High
+
+**Impact:** Low | Medium | High
+
+**Mitigation:** [How to mitigate]
+
+---
+
+## Next Steps
+
+1. Next action 1
+2. Next action 2
+3. Next action 3
