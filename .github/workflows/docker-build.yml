@@ -1,0 +1,140 @@
+name: Docker Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag_version:
+        description: 'Tag version (e.g., 1.0.0)'
+        required: true
+        default: '0.1.0'
+      dockerfile_path:
+        description: 'Path to Dockerfile (default: ./Dockerfile)'
+        required: false
+        default: './Dockerfile'
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push:
+    name: Build & Push Docker Image
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Login to Docker Hub (Optional)
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+        continue-on-error: true
+      
+      - name: Generate Metadata
+        id: meta
+        run: |
+          # Determine tag version
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG_VERSION="${{ github.event.inputs.tag_version }}"
+          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            TAG_VERSION="${GITHUB_REF#refs/tags/v}"
+          else
+            TAG_VERSION="dev-$(git rev-parse --short HEAD)"
+          fi
+          
+          # Generate date tag
+          DATE_TAG="$(date +'%Y%m%d-%H%M')"
+          
+          echo "version=$TAG_VERSION" >> $GITHUB_OUTPUT
+          echo "date=$DATE_TAG" >> $GITHUB_OUTPUT
+          
+          echo "Version: $TAG_VERSION"
+          echo "Date: $DATE_TAG"
+      
+      - name: Generate Docker Tags
+        id: docker_tags
+        run: |
+          VERSION="${{ steps.meta.outputs.version }}"
+          DATE="${{ steps.meta.outputs.date }}"
+          
+          # Base tags for GitHub Container Registry
+          TAGS="ghcr.io/${{ github.repository }}:latest"
+          TAGS="$TAGS,ghcr.io/${{ github.repository }}:$VERSION"
+          TAGS="$TAGS,ghcr.io/${{ github.repository }}:$DATE"
+          
+          # Add Docker Hub tags if credentials exist
+          if [ -n "${{ secrets.DOCKERHUB_USERNAME }}" ]; then
+            REPO_NAME=$(echo "${{ github.repository }}" | cut -d '/' -f 2)
+            TAGS="$TAGS,docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${REPO_NAME}:latest"
+            TAGS="$TAGS,docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${REPO_NAME}:$VERSION"
+            TAGS="$TAGS,docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${REPO_NAME}:$DATE"
+          fi
+          
+          echo "tags=$TAGS" >> $GITHUB_OUTPUT
+          echo "Tags: $TAGS"
+      
+      - name: Determine Dockerfile Path
+        id: dockerfile
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.dockerfile_path }}" ]; then
+            DOCKERFILE="${{ github.event.inputs.dockerfile_path }}"
+          elif [ -f "./ops/Dockerfile" ]; then
+            DOCKERFILE="./ops/Dockerfile"
+          elif [ -f "./Dockerfile" ]; then
+            DOCKERFILE="./Dockerfile"
+          else
+            echo "Error: No Dockerfile found"
+            exit 1
+          fi
+          
+          echo "path=$DOCKERFILE" >> $GITHUB_OUTPUT
+          echo "Using Dockerfile: $DOCKERFILE"
+      
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ${{ steps.dockerfile.outputs.path }}
+          push: true
+          tags: ${{ steps.docker_tags.outputs.tags }}
+          labels: |
+            org.opencontainers.image.title=${{ github.repository }}
+            org.opencontainers.image.description=Built with RooFlow Template
+            org.opencontainers.image.version=${{ steps.meta.outputs.version }}
+            org.opencontainers.image.created=${{ steps.meta.outputs.date }}
+            org.opencontainers.image.source=${{ github.repositoryUrl }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
+      
+      - name: Success Summary
+        run: |
+          echo "✅ Docker image built and pushed successfully!"
+          echo ""
+          echo "Tags:"
+          echo "${{ steps.docker_tags.outputs.tags }}" | tr ',' '\n'
+          echo ""
+          echo "Pull with:"
+          echo "  docker pull ghcr.io/${{ github.repository }}:latest"
